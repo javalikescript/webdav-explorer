@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Explorer</title>
+  <link rel="stylesheet" href="css/font-awesome.min.css">
+  <link rel="stylesheet" href="explorer.css">
+</head>
+<body>
+<section id="welcome" class="page">
+  <header>
+    <span class="toolbar">
+      <button name="settings"><i class="fa fa-cog"></i></button>
+      <button name="welcome-explore" title="Start exploring"><i class="fa fa-chevron-right"></i></button>
+    </span>
+    <h1>Welcome</h1>
+  </header>
+  <article class="content">
+    <p>WebDAV Explorer</p>
+  </article>
+</section>
+<section id="folder" class="page hide-right">
+  <header>
+    <button name="folder-back"><i class="fa fa-chevron-left"></i></button>
+    <button name="folder-home"><i class="fa fa-home"></i></button>
+    <span class="toolbar">
+      <button name="folder-show-details" title="Show folder details"><i class="fa fa-bars"></i></button>
+    </span>
+    <h1>Dirname</h1>
+  </header>
+  <article class="content scrollable">
+    <ul id="items">
+    </ul>
+  </article>
+  <footer>
+    <button name="folder-refresh"><i class="fa fa-refresh"></i></button>
+    <button name="folder-new" title="Create a new folder"><i class="fa fa-folder-o"></i></button>
+    <button name="folder-rename" title="Rename the folder"><i class="fa fa-pencil"></i></button>
+    <button name="file-new" title="Create a new file"><i class="fa fa-file-o"></i></button>
+    <button name="file-paste" title="Paste the file"><i class="fa fa-clipboard"></i></button>
+    <button name="file-upload" title="Upload a file"><i class="fa fa-upload"></i></button>
+    <input type="file" id="file-input" style="display: none;" />
+    <span class="toolbar">
+      <button name="settings"><i class="fa fa-cog"></i></button>
+      <a href="#" name="folder-link" title="Open folder URL"><i class="fa fa-external-link"></i></a>
+    </span>
+  </footer>
+</section>
+<section id="file" class="page hide-right">
+  <header>
+    <button name="file-hide"><i class="fa fa-chevron-left"></i></button>
+    <span class="toolbar">
+      <button name="file-show-editor" title="Edit"><i class="fa fa-paragraph"></i></button>
+      <button name="file-show-details" title="Show file details"><i class="fa fa-bars"></i></button>
+    </span>
+    <h1>Filename</h1>
+  </header>
+  <article class="content scrollable">
+    <p>Content Type: <span name="file-content-type"></span></p>
+    <p>Creation Date: <span name="file-creation-date"></span></p>
+    <p>Modification Date: <span name="file-last-modified"></span></p>
+    <p>Size: <span name="file-content-length"></span></p>
+  </article>
+  <footer>
+    <button name="file-rename" title="Rename the file"><i class="fa fa-pencil"></i></button>
+    <button name="file-delete" title="Delete the file"><i class="fa fa-trash"></i></button>
+    <button name="file-copy" title="Copy the file"><i class="fa fa-clone"></i></button>
+    <button name="file-download" title="Download the file"><i class="fa fa-download"></i></button>
+    <span class="toolbar">
+      <a href="#" name="file-link" title="Open file URL"><i class="fa fa-external-link"></i></a>
+    </span>
+  </footer>
+</section>
+<section id="editor" class="page hide-right">
+  <header>
+    <button name="editor-save" title="Save the file"><i class="fa fa-floppy-o"></i></button>
+    <span class="toolbar">
+      <button name="editor-hide" title="Close edit"><i class="fa fa-times"></i></button>
+      <button name="editor-show-details" title="Show file editor details"><i class="fa fa-bars"></i></button>
+    </span>
+    <h1>Text Editor</h1>
+  </header>
+  <article id="editor-content">
+  </article>
+  <footer>
+    <button name="editor-reload" title="Reload the file"><i class="fa fa-refresh"></i></button>
+  </footer>
+</section>
+<section id="settings" class="page hide-down">
+  <header>
+    <button name="settings-apply" title="Apply"><i class="fa fa-check"></i></button>
+    <span class="toolbar">
+      <button name="settings-hide" title="Cancel"><i class="fa fa-times"></i></button>
+    </span>
+    <h1>Settings</h1>
+  </header>
+  <article class="content scrollable">
+    <h1>WebDAV</h1>
+    <p>Path</p>
+    <input name="settings-webdav-path" type="text" />
+    <p>User</p>
+    <input name="settings-webdav-user" type="text" />
+    <p>Password</p>
+    <input name="settings-webdav-password" type="password" />
+    <h1>Configuration</h1>
+    <p>
+      <input name="settings-show-welcome" type="checkbox" />
+      <span>Show welcome page</span>
+    </p>
+    <button name="settings-save" title="Save configuration"><i class="fa fa-bookmark"></i> Save</button>
+    <button name="settings-clear" title="Clear configuration"><i class="fa fa-eraser"></i> Clear</button>
+  </article>
+</section>
+<section id="foldername" class="page hide-down">
+  <header>
+    <button name="foldername-apply" title="Apply"><i class="fa fa-check"></i></button>
+    <span class="toolbar">
+      <button name="foldername-hide" title="Cancel"><i class="fa fa-times"></i></button>
+    </span>
+    <h1>Folder name</h1>
+  </header>
+  <article class="content">
+    <p>Enter a name</p>
+    <input name="foldername-input" type="text" />
+  </article>
+</section>
+<section id="foldernew" class="page hide-down">
+  <header>
+    <button name="foldernew-apply" title="Apply"><i class="fa fa-check"></i></button>
+    <span class="toolbar">
+      <button name="foldernew-hide" title="Cancel"><i class="fa fa-times"></i></button>
+    </span>
+    <h1>New folder name</h1>
+  </header>
+  <article class="content">
+    <p>Enter a name</p>
+    <input name="foldernew-input" type="text" />
+  </article>
+</section>
+<section id="filenew" class="page hide-down">
+  <header>
+    <button name="filenew-apply" title="Apply"><i class="fa fa-check"></i></button>
+    <span class="toolbar">
+      <button name="filenew-hide" title="Cancel"><i class="fa fa-times"></i></button>
+    </span>
+    <h1>New file name</h1>
+  </header>
+  <article class="content">
+    <p>Enter a name</p>
+    <input name="filenew-input" type="text" />
+  </article>
+</section>
+<section id="filename" class="page hide-down">
+  <header>
+    <button name="filename-apply" title="Apply"><i class="fa fa-check"></i></button>
+    <span class="toolbar">
+      <button name="filename-hide" title="Cancel"><i class="fa fa-times"></i></button>
+    </span>
+    <h1>File name</h1>
+  </header>
+  <article class="content">
+    <p>Enter a name</p>
+    <input name="filename-input" type="text" />
+  </article>
+</section>
+<section id="notification" title="Notification" style="display: none;" class="notification">
+  <i class="fa fa-bell"></i> <span>...</span>
+</section>
+<script src="js/jquery-2.2.0.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="ace/ace.js" type="text/javascript" charset="utf-8"></script>
+<script src="utils.js" type="text/javascript" charset="utf-8"></script>
+<script src="webdav.js" type="text/javascript" charset="utf-8"></script>
+<script src="explorer.js" type="text/javascript" charset="utf-8"></script>
+<script type="text/javascript">
+<!--//
+if (configuration.footers) {
+  $folderSection.toggleClass('footer');
+  $fileSection.toggleClass('footer');
+  $editorSection.toggleClass('footer');
+}
+
+setRootPath(configuration.webdavPath);
+openRootFolder();
+
+if (! configuration.welcome) {
+  selectSection($folderSection);
+}
+//-->
+</script>
+</body>
+</html>
