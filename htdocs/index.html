@@ -52,7 +52,9 @@
   <header>
     <button name="file-hide"><i class="fa fa-chevron-left"></i></button>
     <span class="toolbar">
-      <button name="file-show-editor" title="Edit"><i class="fa fa-paragraph"></i></button>
+      <button name="file-show-editor" title="Edit as text"><i class="fa fa-paragraph"></i></button>
+      <!-- file-image-o -->
+      <button name="file-show-image" title="View as image"><i class="fa fa-picture-o"></i></button>
       <button name="file-show-details" title="Show file details"><i class="fa fa-bars"></i></button>
     </span>
     <h1>Filename</h1>
@@ -86,7 +88,20 @@
   </article>
   <footer>
     <button name="editor-reload" title="Reload the file"><i class="fa fa-refresh"></i></button>
+    <!-- align-justify -->
+    <button name="editor-wrap-lines" title="Wrap lines"><i class="fa fa-align-left"></i></button>
   </footer>
+</section>
+<section id="image" class="page hide-right">
+  <header>
+    <span class="toolbar">
+      <button name="image-hide" title="Close edit"><i class="fa fa-times"></i></button>
+    </span>
+    <h1>Image Viewer</h1>
+  </header>
+  <article class="content scrollable">
+    <img id="image-content" src="null.png" />
+  </article>
 </section>
 <section id="settings" class="page hide-down">
   <header>

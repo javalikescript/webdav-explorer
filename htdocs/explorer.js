@@ -26,9 +26,11 @@ var $filenewSection = $('#filenew');
 var $fileSection = $('#file');
 var $filenameSection = $('#filename');
 var $editorSection = $('#editor');
+var $imageSection = $('#image');
 
 var $currentSection = $welcomeSection;
 var $editorPreviousSection = null;
+var $imagePreviousSection = null;
 var $settingsPreviousSection = null;
 
 var rootItem = {
@@ -55,6 +57,8 @@ var initializeEditor = function() {
   editor = ace.edit("editor-content");
   editor.setTheme("ace/theme/eclipse");
   editor.session.setMode("ace/mode/javascript");
+  // TODO use configuration property (key, type, value)
+  editor.session.setUseWrapMode(true);
   editor.setShowPrintMargin(false);
   editor.renderer.setShowGutter(false);
 };
@@ -70,8 +74,10 @@ var itemToHtml = function(item) {
     classes += ' file';
     icon = 'fa-file';
   }
-  if (item.contentType === 'text/plain') {
+  if (utils.startsWith(item.contentType, 'text/')) {
     buttons = '<button name="item-edit"><i class="fa fa-paragraph"></i></button>' + buttons;
+  } else if (utils.startsWith(item.contentType, 'image/')) {
+    buttons = '<button name="item-image"><i class="fa fa-picture-o"></i></button>' + buttons;
   }
   return '<li class="' + classes + '" href="' + item.href + '" title="' + item.name
       + '" contentType="' + item.contentType + '" creationDate="' + item.creationDate
@@ -143,28 +149,7 @@ var selectSection = function($section, transition) {
   $section.removeClass('hide-' + transition);
   $currentSection = $section;
 };
-var displayFileItem = function(item) {
-  $fileSection.find('header h1').text(item.name);
-  $fileSection.find('footer a[name=file-link]').attr('href', item.href);
-  $fileSection.find('span[name=file-content-type]').text(item.contentType);
-  $fileSection.find('span[name=file-creation-date]').text(item.creationDate);
-  $fileSection.find('span[name=file-last-modified]').text(item.lastModified);
-  $fileSection.find('span[name=file-content-length]').text(item.contentLength);
-};
-var openFileItem = function(item) {
-  currentFileItem = item;
-  displayFileItem(currentFileItem);
-  selectSection($fileSection);
-};
 
-var openItem = function($item) {
-  var item = itemFromElement($item);
-  if (item.directory) {
-    openFolderItem(item);
-  } else {
-    openFileItem(item);
-  }
-};
 var newFile = function(content, name) {
   name = name || 'New file';
   var item = currentFolderItem;
@@ -185,10 +170,24 @@ var newFile = function(content, name) {
     });
   }
 };
+
+/***************************************************************
+ * Section helpers
+ * TODO Create class
+ ***************************************************************/
+var openFileItem = function() {
+  $fileSection.find('header h1').text(currentFileItem.name);
+  $fileSection.find('footer a[name=file-link]').attr('href', currentFileItem.href);
+  $fileSection.find('span[name=file-content-type]').text(currentFileItem.contentType);
+  $fileSection.find('span[name=file-creation-date]').text(currentFileItem.creationDate);
+  $fileSection.find('span[name=file-last-modified]').text(currentFileItem.lastModified);
+  $fileSection.find('span[name=file-content-length]').text(currentFileItem.contentLength);
+  selectSection($fileSection);
+};
 var closeEditor = function() {
   selectSection($editorPreviousSection, 'left');
 };
-var openEditor = function(fileItem) {
+var openEditor = function() {
   initializeEditor();
   $editorSection.find('header h1').text(currentFileItem.name);
   editor.setValue('...', -1);
@@ -214,6 +213,14 @@ var openSettings = function() {
   $('input[name=settings-webdav-password]').val(webdavPassword);
   $('input[name=settings-show-welcome]').prop('checked', configuration.welcome);
   selectSection($settingsSection, 'down');
+};
+var closeImage = function() {
+  selectSection($imagePreviousSection, 'left');
+};
+var openImage = function() {
+  $imageSection.find('img').prop('src', currentFileItem.href);
+  $imagePreviousSection = $currentSection;
+  selectSection($imageSection);
 };
 
 /***************************************************************
@@ -285,20 +292,24 @@ $('#file-input').on('change', function(e) {
 });
 $items.click(function (event) {
   var $element = $(event.target);
-	/*
-  if ($element.attr('name') == 'item-open') {
-    $element = $element.parent().parent();
-  } else {
-    $element = $element.parent();
-  }// .prop('nodeName')
-	if ($element.hasClass('item')) {
-		openItem($element);
-	}
-	*/
 	var $item = $element.closest('li.item');
-	if ($item.length == 1) {
-		openItem($item);
+	if ($item.length !== 1) {
+		return;
 	}
+  var item = itemFromElement($item);
+  if (item.directory) {
+    openFolderItem(item);
+		return;
+  }
+  var name = $element.attr('name');
+  currentFileItem = item;
+  if (name === 'item-edit') {
+    openEditor();
+  } else if (name === 'item-image') {
+    openImage();
+  } else {
+    openFileItem();
+  }
 });
 $('button[name=folder-rename]').click(function () {
   $foldernameSection.find('header h1').text(currentFolderItem.name);
@@ -390,7 +401,10 @@ $('button[name=file-hide]').click(function () {
   selectSection($folderSection, 'left');
 });
 $("button[name='file-show-editor']").click(function () {
-  openEditor(currentFileItem);
+  openEditor();
+});
+$("button[name='file-show-image']").click(function () {
+  openImage();
 });
 $('button[name=file-copy]').click(function () {
   clipboard = currentFileItem;
@@ -458,6 +472,10 @@ $("button[name='editor-show-details']").click(function () {
 $('button[name=editor-hide]').click(function () {
   closeEditor();
 });
+$("button[name='editor-wrap-lines']").click(function () {
+  var useWrapMode = editor.session.getUseWrapMode();
+  editor.session.setUseWrapMode(! useWrapMode);
+});
 $('button[name=editor-reload]').click(function () {
   editor.setValue('...', -1);
   webdav.loadPath(currentFileItem.href, webdavUser, webdavPassword).done(function (content) {
@@ -469,6 +487,12 @@ $('button[name=editor-save]').click(function () {
   webdav.savePath(currentFileItem.href, content, webdavUser, webdavPassword).done(function () {
     notify('File saved');
   });
+});
+/***************************************************************
+ * Section image
+ ***************************************************************/
+$('button[name=image-hide]').click(function () {
+  closeImage();
 });
 
 console.log('explorer.js initialized');

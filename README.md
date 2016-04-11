@@ -1,16 +1,33 @@
-# webdav-explorer
-Small WebDAV File Explorer
+# WebDAV Explorer
 
-The WebDAV file explorer provides a light and simple way to access your documents anywhere. It also embbeds a text file editor allowing note taking.
+Web-based Distributed Authoring and Versioning (WebDAV) allows creating, moving,
+copying, and deleting resources and collections on a remote web server.
+See http://www.webdav.org/specs/rfc4918.html
+
+The WebDAV file explorer provides a light and simple way to access your documents anywhere.
+It provides a mobile friendly user interface for browsing files exposed through WebDAV.
+It also embedds a text file editor allowing note taking.
 
 ## Get Started
 
 The htdocs directory contains the files to expose by your Apache HTTP server.
 
 You shall add the required dependencies:
-* Font-Awesome https://fortawesome.github.io/Font-Awesome/
+* Font-Awesome http://fontawesome.io/
 * jQuery http://jquery.com/
 * Ace https://ace.c9.io/
 
-You shall configure your Apache HTTP server to support WebDAV requests. Consult the configuration example for more details.
-Using HTTPS is highly recommended as the current version use the basic authentication.
+You shall configure your Apache HTTP server to support WebDAV requests.
+See https://httpd.apache.org/docs/2.2/mod/mod_dav.html
+You shall enable WebDAV on the directory that you want to share.
+Consult the configuration example for more details.
+Please note by doing so, the files are not only available by WebDAV Explorer but other tools.
+
+## Disclaimer
+
+This application is provided as-is and may contains bugs.
+Using this application may result in data loss, security vulnerability and other unpleasant situations.
+
+Exposing and manipulating documents is dangerous.
+Do not expose important documents. Make sure that you have a copy of each document.
+Secure your web server using at least Basic Authentication over HTTPS.
