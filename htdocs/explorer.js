@@ -63,7 +63,7 @@ var initializeEditor = function() {
   editor.renderer.setShowGutter(false);
 };
 var itemToHtml = function(item) {
-  var shortName = item.name.length > 18 ? item.name.substring(0, 18) : item.name;
+  var shortName = item.name.length > 64 ? item.name.substring(0, 64) : item.name;
   var buttons = '<button name="item-open"><i class="fa fa-chevron-right"></i></button>';
   var classes = 'item';
   var icon;

@@ -1,6 +1,6 @@
 var utils = {
   startsWith: function(s, v) {
-    return s.lastIndexOf(v, 0) === 0;
+    return s && (s.lastIndexOf(v, 0) === 0);
   },
   endsWith: function(s, v) {
     return s.indexOf(v, s.length - v.length) !== -1;
