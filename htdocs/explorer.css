@@ -170,6 +170,9 @@ i.fa {
   overflow-y: auto;
   position: relative;
 }
+#image-content.full, #video-content.full {
+  width: 100%;
+}
 #editor-content {
   margin: 0;
   font-size: 1.9em;

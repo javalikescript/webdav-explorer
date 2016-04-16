@@ -55,6 +55,7 @@
       <button name="file-show-editor" title="Edit as text"><i class="fa fa-paragraph"></i></button>
       <!-- file-image-o -->
       <button name="file-show-image" title="View as image"><i class="fa fa-picture-o"></i></button>
+      <button name="file-show-video" title="View as video"><i class="fa fa-film"></i></button>
       <button name="file-show-details" title="Show file details"><i class="fa fa-bars"></i></button>
     </span>
     <h1>Filename</h1>
@@ -95,12 +96,25 @@
 <section id="image" class="page hide-right">
   <header>
     <span class="toolbar">
-      <button name="image-hide" title="Close edit"><i class="fa fa-times"></i></button>
+      <button name="image-hide" title="Close image"><i class="fa fa-times"></i></button>
     </span>
     <h1>Image Viewer</h1>
   </header>
   <article class="content scrollable">
-    <img id="image-content" src="null.png" />
+    <img id="image-content" class="full" src="null.png" />
+  </article>
+</section>
+<section id="video" class="page hide-right">
+  <header>
+    <span class="toolbar">
+      <button name="video-hide" title="Close video"><i class="fa fa-times"></i></button>
+    </span>
+    <h1>Video Viewer</h1>
+  </header>
+  <article class="content scrollable">
+    <video id="video-content" class="full" src="null.mp4" controls="controls">
+      <p>Cannot play video content</p>
+    </video>
   </article>
 </section>
 <section id="settings" class="page hide-down">
@@ -123,6 +137,10 @@
     <p>
       <input name="settings-show-welcome" type="checkbox" />
       <span>Show welcome page</span>
+    </p>
+    <p>
+      <input name="settings-show-footers" type="checkbox" />
+      <span>Show footers</span>
     </p>
     <button name="settings-save" title="Save configuration"><i class="fa fa-bookmark"></i> Save</button>
     <button name="settings-clear" title="Clear configuration"><i class="fa fa-eraser"></i> Clear</button>
@@ -195,13 +213,15 @@ if (configuration.footers) {
   $fileSection.toggleClass('footer');
   $editorSection.toggleClass('footer');
 }
-
 setRootPath(configuration.webdavPath);
-openRootFolder();
-
-if (! configuration.welcome) {
-  selectSection($folderSection);
-}
+openRootFolder().done(function() {
+  if (! configuration.welcome) {
+    selectSection($folderSection);
+  }
+}).fail(function() {
+  notify('Cannot open root folder, check settings');
+  openSettings();
+});
 //-->
 </script>
 </body>
