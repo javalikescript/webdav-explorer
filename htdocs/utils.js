@@ -1,4 +1,30 @@
 var utils = {
+  // see http://www.kevlindev.com/tutorials/javascript/inheritance/index.htm
+  inheritsFrom: function(clazz, superClass) {
+    var subClass = function() {};
+    subClass.prototype = superClass.prototype;
+    // inherits
+    clazz.prototype = new subClass();
+    clazz.prototype.constructor = clazz;
+    // helpers
+    clazz.baseConstructor = superClass;
+    clazz.superClass = superClass.prototype;
+  },
+  keys: function(obj) {
+    var list = [];
+    for (var key in obj) {
+      list.push(key);
+    }
+    return list;
+  },
+  merge: function(target, source) {
+    for (var key in source) {
+      if (! (key in target)) {
+        target[key] = source[key];
+      }
+    }
+    return target;
+  },
   startsWith: function(s, v) {
     return s && (s.lastIndexOf(v, 0) === 0);
   },

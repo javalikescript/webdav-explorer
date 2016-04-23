@@ -1,6 +1,68 @@
 
+var transitionOppositeMap = {
+  'left': 'right',
+  'right': 'left',
+  'up': 'down',
+  'down': 'up'
+};
+var selectSection = function(fromSection, toSection, transition) {
+  transition = transition || 'right';
+  var transitionOpposite = transitionOppositeMap[transition];
+  fromSection.getNode().addClass('hide-' + transitionOpposite);
+  toSection.getNode().removeClass('hide-' + transition);
+};
+
+var Section = function(id) {
+  this._id = id;
+  this._node = $('#' + id);
+}
+Section.prototype.getId = function() {
+  return this._id;
+};
+Section.prototype.getNode = function() {
+  return this._node;
+};
+Section.prototype.refresh = function() {};
+Section.prototype.open = function(fromSection) {
+  this._callerSection = fromSection;
+  //console.log('open(): ' + fromSection.getId() + ' -> ' + this.getId());
+  this.refresh();
+};
+Section.prototype.close = function() {
+  //console.log('close(): ' + this.getId() + ' -> ' + this._callerSection.getId());
+  return this._callerSection;
+};
+
+var DialogSection = function(id) {
+  DialogSection.baseConstructor.call(this, id);
+}
+utils.inheritsFrom(DialogSection, Section);
+DialogSection.prototype.open = function(fromSection) {
+  DialogSection.superClass.open.call(this, fromSection);
+  selectSection(fromSection, this, 'down');
+};
+DialogSection.prototype.close = function() {
+  var callerSection = DialogSection.superClass.close.call(this);
+  selectSection(this, callerSection, 'up');
+};
+
+var PanelSection = function(id) {
+  PanelSection.baseConstructor.call(this, id);
+}
+utils.inheritsFrom(PanelSection, Section);
+PanelSection.prototype.open = function(fromSection) {
+  PanelSection.superClass.open.call(this, fromSection);
+  selectSection(fromSection, this, 'right');
+};
+PanelSection.prototype.close = function() {
+  var callerSection = PanelSection.superClass.close.call(this);
+  selectSection(this, callerSection, 'left');
+};
+PanelSection.prototype.toggleOptions = function() {
+  this.getNode().toggleClass('footer');
+};
+
 var configuration = utils.getLocalStorageObject('explorer_configuration', {
-  footers: false,
   welcome: true,
   webdavPath: '/wddocs/',
   webdavUser: null,
@@ -25,23 +87,52 @@ var webdavUser = configuration.webdavUser;
 var webdavPassword = configuration.webdavPassword;
 
 var $items = $('#items');
-var $welcomeSection = $('#welcome');
-var $settingsSection = $('#settings');
-var $folderSection = $('#folder');
-var $foldernameSection = $('#foldername');
-var $foldernewSection = $('#foldernew');
-var $filenewSection = $('#filenew');
-var $fileSection = $('#file');
-var $filenameSection = $('#filename');
-var $editorSection = $('#editor');
-var $imageSection = $('#image');
-var $videoSection = $('#video');
 
-var $currentSection = $welcomeSection;
-var $settingsPreviousSection = null;
-var $editorPreviousSection = null;
-var $imagePreviousSection = null;
-var $videoPreviousSection = null;
+var welcomeSection = new PanelSection('welcome');
+var folderSection = new PanelSection('folder');
+var fileSection = new PanelSection('file');
+fileSection.refresh = function() {
+  this.getNode().find('header h1').text(currentFileItem.name);
+  this.getNode().find('footer a[name=file-link]').attr('href', currentFileItem.href);
+  this.getNode().find('span[name=file-content-type]').text(currentFileItem.contentType);
+  this.getNode().find('span[name=file-creation-date]').text(currentFileItem.creationDate);
+  this.getNode().find('span[name=file-last-modified]').text(currentFileItem.lastModified);
+  this.getNode().find('span[name=file-content-length]').text(currentFileItem.contentLength);
+};
+var settingsSection = new DialogSection('settings');
+settingsSection.refresh = function() {
+  $('input[name=settings-webdav-path]').val(rootItem.href);
+  $('input[name=settings-webdav-user]').val(webdavUser);
+  $('input[name=settings-webdav-password]').val(webdavPassword);
+  $('input[name=settings-show-welcome]').prop('checked', configuration.welcome);
+};
+var foldernameSection = new DialogSection('foldername');
+foldernameSection.refresh = function() {
+  this.getNode().find('header h1').text(currentFolderItem.name);
+};
+var foldernewSection = new DialogSection('foldernew');
+var filenewSection = new DialogSection('filenew');
+var filenameSection = new DialogSection('filename');
+filenameSection.refresh = function() {
+  this.getNode().find('header h1').text(currentFileItem.name);
+};
+var editorSection = new PanelSection('editor');
+editorSection.refresh = function() {
+  initializeEditor();
+  this.getNode().find('header h1').text(currentFileItem.name);
+  editor.setValue('...', -1);
+  webdav.loadPath(currentFileItem.href, webdavUser, webdavPassword).done(function (content) {
+    editor.setValue(content, -1);
+  });
+};
+var imageSection = new PanelSection('image');
+imageSection.refresh = function() {
+  this.getNode().find('img').prop('src', currentFileItem.href);
+};
+var videoSection = new PanelSection('video');
+videoSection.refresh = function() {
+  this.getNode().find('video').prop('src', currentFileItem.href);
+};
 
 var notify = (function () {
   var $notification = $("#notification");
@@ -113,8 +204,8 @@ var itemSortFn = function(a, b) {
 
 var displayFolderItem = function(folderItem) {
   currentFolderItem = folderItem;
-  $folderSection.find('header h1').text(folderItem.name);
-  $folderSection.find('footer a[name=folder-link]').attr('href', folderItem.href);
+  folderSection.getNode().find('header h1').text(folderItem.name);
+  folderSection.getNode().find('footer a[name=folder-link]').attr('href', folderItem.href);
   $items.empty();
   for (var i = 0; i < folderItem.items.length; i++) {
     var item = folderItem.items[i];
@@ -141,19 +232,6 @@ var openRootFolder = function () {
 var setRootPath = function(href) {
   rootItem.href = href;
 };
-var transitionOppositeMap = {
-  'left': 'right',
-  'right': 'left',
-  'up': 'down',
-  'down': 'up'
-};
-var selectSection = function($section, transition) {
-  transition = transition || 'right';
-  var transitionOpposite = transitionOppositeMap[transition];
-  $currentSection.addClass('hide-' + transitionOpposite);
-  $section.removeClass('hide-' + transition);
-  $currentSection = $section;
-};
 
 var newFile = function(content, name) {
   name = name || 'New file';
@@ -177,94 +255,32 @@ var newFile = function(content, name) {
 };
 
 /***************************************************************
- * Section helpers
- * TODO Create class
- ***************************************************************/
-var openFileItem = function() {
-  $fileSection.find('header h1').text(currentFileItem.name);
-  $fileSection.find('footer a[name=file-link]').attr('href', currentFileItem.href);
-  $fileSection.find('span[name=file-content-type]').text(currentFileItem.contentType);
-  $fileSection.find('span[name=file-creation-date]').text(currentFileItem.creationDate);
-  $fileSection.find('span[name=file-last-modified]').text(currentFileItem.lastModified);
-  $fileSection.find('span[name=file-content-length]').text(currentFileItem.contentLength);
-  selectSection($fileSection);
-};
-var closeEditor = function() {
-  selectSection($editorPreviousSection, 'left');
-};
-var openEditor = function() {
-  initializeEditor();
-  $editorSection.find('header h1').text(currentFileItem.name);
-  editor.setValue('...', -1);
-  webdav.loadPath(currentFileItem.href, webdavUser, webdavPassword).done(function (content) {
-    editor.setValue(content, -1);
-  });
-  $editorPreviousSection = $currentSection;
-  selectSection($editorSection);
-};
-var closeSettings = function() {
-  selectSection($settingsPreviousSection, 'up');
-};
-var applySettings = function() {
-  rootItem.href = $('input[name=settings-webdav-path]').val();
-  webdavUser = $('input[name=settings-webdav-user]').val();
-  webdavPassword = $('input[name=settings-webdav-password]').val();
-};
-var saveSettings = function() {
-  configuration.webdavPath = $('input[name=settings-webdav-path]').val();
-  configuration.webdavUser = $('input[name=settings-webdav-user]').val();
-  configuration.webdavPassword = $('input[name=settings-webdav-password]').val();
-  configuration.welcome = $('input[name=settings-show-welcome]').prop('checked');
-  configuration.footers = $('input[name=settings-show-footers]').prop('checked');
-  utils.setLocalStorageObject('explorer_configuration', configuration);
-};
-var openSettings = function() {
-  $settingsPreviousSection = $currentSection;
-  $('input[name=settings-webdav-path]').val(rootItem.href);
-  $('input[name=settings-webdav-user]').val(webdavUser);
-  $('input[name=settings-webdav-password]').val(webdavPassword);
-  $('input[name=settings-show-welcome]').prop('checked', configuration.welcome);
-  $('input[name=settings-show-footers]').prop('checked', configuration.footers);
-  selectSection($settingsSection, 'down');
-};
-var closeImage = function() {
-  selectSection($imagePreviousSection, 'left');
-};
-var openImage = function() {
-  $imageSection.find('img').prop('src', currentFileItem.href);
-  $imagePreviousSection = $currentSection;
-  selectSection($imageSection);
-};
-var closeVideo = function() {
-  selectSection($videoPreviousSection, 'left');
-};
-var openVideo = function() {
-  $videoSection.find('video').prop('src', currentFileItem.href);
-  $videoPreviousSection = $currentSection;
-  selectSection($videoSection);
-};
-
-/***************************************************************
  * Section welcome
  ***************************************************************/
-/*$('button[name=settings]').click(function () {
-  openSettings();
-});*/
+$('button[name=welcome-settings]').click(function () {
+  settingsSection.open(welcomeSection);
+});
 $('button[name=welcome-explore]').click(function () {
-  selectSection($folderSection);
+  folderSection.open(welcomeSection);
 });
 /***************************************************************
  * Section settings
  ***************************************************************/
 $('button[name=settings-hide]').click(function () {
-  closeSettings();
+  settingsSection.close();
 });
 $('button[name=settings-apply]').click(function () {
-  applySettings();
-  closeSettings();
+  rootItem.href = $('input[name=settings-webdav-path]').val();
+  webdavUser = $('input[name=settings-webdav-user]').val();
+  webdavPassword = $('input[name=settings-webdav-password]').val();
+  settingsSection.close();
 });
 $('button[name=settings-save]').click(function () {
-  saveSettings();
+  configuration.webdavPath = $('input[name=settings-webdav-path]').val();
+  configuration.webdavUser = $('input[name=settings-webdav-user]').val();
+  configuration.webdavPassword = $('input[name=settings-webdav-password]').val();
+  configuration.welcome = $('input[name=settings-show-welcome]').prop('checked');
+  utils.setLocalStorageObject('explorer_configuration', configuration);
 });
 $('button[name=settings-clear]').click(function () {
   utils.removeLocalStorageObject('explorer_configuration');
@@ -287,11 +303,11 @@ $("button[name='folder-back']").click(function () {
     var item = breadcrumbItems[breadcrumbItems.length - 1];
     displayFolderItem(item);
   } else {
-    selectSection($welcomeSection, 'left');
+    folderSection.close();
   }
 });
 $("button[name='folder-show-details']").click(function () {
-  $currentSection.toggleClass('footer');
+  folderSection.toggleOptions();
 });
 $('button[name=file-upload]').click(function () {
   $('#file-input').trigger( "click" );
@@ -326,34 +342,33 @@ $items.click(function (event) {
   var name = $element.attr('name');
   currentFileItem = item;
   if (name === 'item-edit') {
-    openEditor();
+    editorSection.open(folderSection);
   } else if (name === 'item-image') {
-    openImage();
+    imageSection.open(folderSection);
   } else if (name === 'item-video') {
-    openVideo();
+    videoSection.open(folderSection);
   } else {
-    openFileItem();
+    fileSection.open(folderSection);
   }
 });
 $('button[name=folder-rename]').click(function () {
-  $foldernameSection.find('header h1').text(currentFolderItem.name);
-  selectSection($foldernameSection, 'down');
+  foldernameSection.open(folderSection);
 });
 $('button[name=folder-new]').click(function () {
-  selectSection($foldernewSection, 'down');
+  foldernewSection.open(folderSection);
 });
 $('button[name=file-new]').click(function () {
-  selectSection($filenewSection, 'down');
+  filenewSection.open(folderSection);
 });
-$('button[name=settings]').click(function () {
-  openSettings();
+$('button[name=folder-settings]').click(function () {
+  settingsSection.open(folderSection);
 });
 
 /***************************************************************
  * Section foldername
  ***************************************************************/
 $('button[name=foldername-hide]').click(function () {
-  selectSection($folderSection, 'up');
+  foldernameSection.close();
 });
 $('button[name=foldername-apply]').click(function () {
   var newName = $('input[name=foldername-input]').val();
@@ -370,14 +385,14 @@ $('button[name=foldername-apply]').click(function () {
       refreshFolder();
     });
   }
-  selectSection($folderSection, 'up');
+  foldernameSection.close();
 });
 
 /***************************************************************
  * Section foldernew
  ***************************************************************/
 $('button[name=foldernew-hide]').click(function () {
-  selectSection($folderSection, 'up');
+  foldernewSection.close();
 });
 $('button[name=foldernew-apply]').click(function () {
   var newName = $('input[name=foldernew-input]').val();
@@ -395,14 +410,14 @@ $('button[name=foldernew-apply]').click(function () {
       refreshFolder();
     });
   }
-  selectSection($folderSection, 'up');
+  foldernewSection.close();
 });
 
 /***************************************************************
  * Section filenew
  ***************************************************************/
 $('button[name=filenew-hide]').click(function () {
-  selectSection($folderSection, 'up');
+  filenewSection.close();
 });
 $('button[name=filenew-apply]').click(function () {
   var newName = $('input[name=filenew-input]').val();
@@ -412,26 +427,26 @@ $('button[name=filenew-apply]').click(function () {
     return;
   }
   newFile('', newName);
-  selectSection($folderSection, 'up');
+  filenewSection.close();
 });
 
 /***************************************************************
  * Section file
  ***************************************************************/
 $("button[name='file-show-details']").click(function () {
-  $currentSection.toggleClass('footer');
+  fileSection.toggleOptions();
 });
 $('button[name=file-hide]').click(function () {
-  selectSection($folderSection, 'left');
+  fileSection.close();
 });
 $("button[name='file-show-editor']").click(function () {
-  openEditor();
+  editorSection.open(fileSection);
 });
 $("button[name='file-show-image']").click(function () {
-  openImage();
+  imageSection.open(fileSection);
 });
 $("button[name='file-show-video']").click(function () {
-  openVideo();
+  videoSection.open(fileSection);
 });
 $('button[name=file-copy]').click(function () {
   clipboard = currentFileItem;
@@ -456,8 +471,7 @@ $('button[name=file-delete]').click(function () {
   }
 });
 $('button[name=file-rename]').click(function () {
-  $filenameSection.find('header h1').text(currentFileItem.name);
-  selectSection($filenameSection, 'down');
+  filenameSection.open(fileSection);
 });
 $('button[name=file-download]').click(function () {
   webdav.loadPath(currentFileItem.href, webdavUser, webdavPassword).done(function (content) {
@@ -470,7 +484,7 @@ $('button[name=file-download]').click(function () {
  * Section filename
  ***************************************************************/
 $('button[name=filename-hide]').click(function () {
-  selectSection($fileSection, 'up');
+  filenameSection.close();
 });
 $('button[name=filename-apply]').click(function () {
   var newName = $('input[name=filename-input]').val();
@@ -487,17 +501,17 @@ $('button[name=filename-apply]').click(function () {
       refreshFolder();
     });
   }
-  selectSection($fileSection, 'up');
+  filenameSection.close();
 });
 
 /***************************************************************
  * Section editor
  ***************************************************************/
 $("button[name='editor-show-details']").click(function () {
-  $currentSection.toggleClass('footer');
+  editorSection.toggleOptions();
 });
 $('button[name=editor-hide]').click(function () {
-  closeEditor();
+  editorSection.close();
 });
 $("button[name='editor-wrap-lines']").click(function () {
   var useWrapMode = editor.session.getUseWrapMode();
@@ -519,13 +533,13 @@ $('button[name=editor-save]').click(function () {
  * Section image
  ***************************************************************/
 $('button[name=image-hide]').click(function () {
-  closeImage();
+  imageSection.close();
 });
 /***************************************************************
  * Section video
  ***************************************************************/
 $('button[name=video-hide]').click(function () {
-  closeVideo();
+  videoSection.close();
 });
 
 console.log('explorer.js initialized');

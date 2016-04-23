@@ -12,7 +12,7 @@
 <section id="welcome" class="page">
   <header>
     <span class="toolbar">
-      <button name="settings"><i class="fa fa-cog"></i></button>
+      <button name="welcome-settings"><i class="fa fa-cog"></i></button>
       <button name="welcome-explore" title="Start exploring"><i class="fa fa-chevron-right"></i></button>
     </span>
     <h1>Welcome</h1>
@@ -43,7 +43,7 @@
     <button name="file-upload" title="Upload a file"><i class="fa fa-upload"></i></button>
     <input type="file" id="file-input" style="display: none;" />
     <span class="toolbar">
-      <button name="settings"><i class="fa fa-cog"></i></button>
+      <button name="folder-settings"><i class="fa fa-cog"></i></button>
       <a href="#" name="folder-link" title="Open folder URL"><i class="fa fa-external-link"></i></a>
     </span>
   </footer>
@@ -138,10 +138,6 @@
       <input name="settings-show-welcome" type="checkbox" />
       <span>Show welcome page</span>
     </p>
-    <p>
-      <input name="settings-show-footers" type="checkbox" />
-      <span>Show footers</span>
-    </p>
     <button name="settings-save" title="Save configuration"><i class="fa fa-bookmark"></i> Save</button>
     <button name="settings-clear" title="Clear configuration"><i class="fa fa-eraser"></i> Clear</button>
   </article>
@@ -208,19 +204,14 @@
 <script src="explorer.js" type="text/javascript" charset="utf-8"></script>
 <script type="text/javascript">
 <!--//
-if (configuration.footers) {
-  $folderSection.toggleClass('footer');
-  $fileSection.toggleClass('footer');
-  $editorSection.toggleClass('footer');
-}
 setRootPath(configuration.webdavPath);
 openRootFolder().done(function() {
   if (! configuration.welcome) {
-    selectSection($folderSection);
+    folderSection.open(welcomeSection);
   }
 }).fail(function() {
   notify('Cannot open root folder, check settings');
-  openSettings();
+  settingsSection.open(welcomeSection);
 });
 //-->
 </script>
