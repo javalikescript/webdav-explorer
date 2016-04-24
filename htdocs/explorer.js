@@ -12,55 +12,46 @@ var selectSection = function(fromSection, toSection, transition) {
   toSection.getNode().removeClass('hide-' + transition);
 };
 
-var Section = function(id) {
+var Section = function(id, transition) {
   this._id = id;
+  this._transition = transition || 'right';
   this._node = $('#' + id);
 }
-Section.prototype.getId = function() {
-  return this._id;
-};
-Section.prototype.getNode = function() {
-  return this._node;
-};
-Section.prototype.refresh = function() {};
-Section.prototype.open = function(fromSection) {
-  this._callerSection = fromSection;
-  //console.log('open(): ' + fromSection.getId() + ' -> ' + this.getId());
-  this.refresh();
-};
-Section.prototype.close = function() {
-  //console.log('close(): ' + this.getId() + ' -> ' + this._callerSection.getId());
-  return this._callerSection;
-};
+utils.merge(Section.prototype, {
+  getId: function() {
+    return this._id;
+  },
+  getNode: function() {
+    return this._node;
+  },
+  refresh: function() {},
+  open: function(fromSection) {
+    this._callerSection = fromSection;
+    //console.log('open(): ' + fromSection.getId() + ' -> ' + this.getId());
+    selectSection(fromSection, this, this._transition);
+    this.refresh();
+  },
+  close: function() {
+    //console.log('close(): ' + this.getId() + ' -> ' + this._callerSection.getId());
+    selectSection(this, this._callerSection, transitionOppositeMap[this._transition]);
+    return this._callerSection;
+  }
+});
 
 var DialogSection = function(id) {
-  DialogSection.baseConstructor.call(this, id);
+  DialogSection.baseConstructor.call(this, id, 'down');
 }
 utils.inheritsFrom(DialogSection, Section);
-DialogSection.prototype.open = function(fromSection) {
-  DialogSection.superClass.open.call(this, fromSection);
-  selectSection(fromSection, this, 'down');
-};
-DialogSection.prototype.close = function() {
-  var callerSection = DialogSection.superClass.close.call(this);
-  selectSection(this, callerSection, 'up');
-};
 
 var PanelSection = function(id) {
-  PanelSection.baseConstructor.call(this, id);
+  PanelSection.baseConstructor.call(this, id, 'right');
 }
 utils.inheritsFrom(PanelSection, Section);
-PanelSection.prototype.open = function(fromSection) {
-  PanelSection.superClass.open.call(this, fromSection);
-  selectSection(fromSection, this, 'right');
-};
-PanelSection.prototype.close = function() {
-  var callerSection = PanelSection.superClass.close.call(this);
-  selectSection(this, callerSection, 'left');
-};
-PanelSection.prototype.toggleOptions = function() {
-  this.getNode().toggleClass('footer');
-};
+utils.merge(PanelSection.prototype, {
+  toggleOptions: function() {
+    this.getNode().toggleClass('footer');
+  }
+});
 
 var configuration = utils.getLocalStorageObject('explorer_configuration', {
   welcome: true,
@@ -83,8 +74,8 @@ var currentFileItem = null;
 var clipboard = null;
 
 var webdavOrigin = window.location.origin;
-var webdavUser = configuration.webdavUser;
-var webdavPassword = configuration.webdavPassword;
+
+var webdav = new WebDAV(configuration.webdavUser, configuration.webdavPassword);
 
 var $items = $('#items');
 
@@ -102,8 +93,8 @@ fileSection.refresh = function() {
 var settingsSection = new DialogSection('settings');
 settingsSection.refresh = function() {
   $('input[name=settings-webdav-path]').val(rootItem.href);
-  $('input[name=settings-webdav-user]').val(webdavUser);
-  $('input[name=settings-webdav-password]').val(webdavPassword);
+  $('input[name=settings-webdav-user]').val(webdav.getUserName());
+  $('input[name=settings-webdav-password]').val(webdav.getPassword());
   $('input[name=settings-show-welcome]').prop('checked', configuration.welcome);
 };
 var foldernameSection = new DialogSection('foldername');
@@ -121,7 +112,7 @@ editorSection.refresh = function() {
   initializeEditor();
   this.getNode().find('header h1').text(currentFileItem.name);
   editor.setValue('...', -1);
-  webdav.loadPath(currentFileItem.href, webdavUser, webdavPassword).done(function (content) {
+  webdav.loadPath(currentFileItem.href).done(function (content) {
     editor.setValue(content, -1);
   });
 };
@@ -213,7 +204,7 @@ var displayFolderItem = function(folderItem) {
   }
 };
 var openFolderItem = function(item) {
-  return webdav.find(item.href, webdavUser, webdavPassword).done(function (items) {
+  return webdav.find(item.href).done(function (items) {
     breadcrumbItems.push(item);
     item.items = items;
     item.items.sort(itemSortFn);
@@ -238,7 +229,7 @@ var newFile = function(content, name) {
   var item = currentFolderItem;
   if (item && item.directory && item.href) {
     var path = item.href + name;
-    webdav.savePath(path, content, webdavUser, webdavPassword).done(function() {
+    webdav.savePath(path, content).done(function() {
       refreshFolder();
       /*
       item.items.push({
@@ -271,8 +262,9 @@ $('button[name=settings-hide]').click(function () {
 });
 $('button[name=settings-apply]').click(function () {
   rootItem.href = $('input[name=settings-webdav-path]').val();
-  webdavUser = $('input[name=settings-webdav-user]').val();
-  webdavPassword = $('input[name=settings-webdav-password]').val();
+  var webdavUsername = $('input[name=settings-webdav-user]').val();
+  var webdavPassword = $('input[name=settings-webdav-password]').val();
+  webdav.setUser(webdavUsername, webdavPassword);
   settingsSection.close();
 });
 $('button[name=settings-save]').click(function () {
@@ -315,12 +307,14 @@ $('button[name=file-upload]').click(function () {
 $('#file-input').on('change', function(e) {
   var file = e.target.files[0];
   if (file) {
+    // file.name, size, type
     var reader = new FileReader();
     reader.onload = function(e) {
       var content = e.target.result;
-      newFile(content, 'uploaded_file');
+      newFile(content, file.name);
     };
     reader.readAsText(file);
+    // readAsArrayBuffer
   }
 });
 $items.click(function (event) {
@@ -380,7 +374,7 @@ $('button[name=foldername-apply]').click(function () {
   var item = currentFolderItem;
   if (item && (item.directory) && item.href) {
     var newHRef = item.href + encodeURIComponent(newName);
-    webdav.movePath(item.href, webdavOrigin + newHRef, webdavUser, webdavPassword).done(function () {
+    webdav.movePath(item.href, webdavOrigin + newHRef).done(function () {
       notify('folder ' + newName + ' renamed');
       refreshFolder();
     });
@@ -405,7 +399,7 @@ $('button[name=foldernew-apply]').click(function () {
   var item = currentFolderItem;
   if (item && (item.directory) && item.href) {
     var newHRef = item.href + encodeURIComponent(newName);
-    webdav.mkColl(newHRef, webdavUser, webdavPassword).done(function () {
+    webdav.mkColl(newHRef).done(function () {
       notify('folder ' + newName + ' created');
       refreshFolder();
     });
@@ -464,7 +458,7 @@ $('button[name=file-paste]').click(function () {
 $('button[name=file-delete]').click(function () {
   var item = currentFileItem;
   if (item && (! item.directory) && item.href) {
-    webdav.deletePath(item.href, webdavUser, webdavPassword).done(function () {
+    webdav.deletePath(item.href).done(function () {
       notify('file ' + item.name + ' deleted');
       refreshFolder();
     });
@@ -474,7 +468,7 @@ $('button[name=file-rename]').click(function () {
   filenameSection.open(fileSection);
 });
 $('button[name=file-download]').click(function () {
-  webdav.loadPath(currentFileItem.href, webdavUser, webdavPassword).done(function (content) {
+  webdav.loadPath(currentFileItem.href).done(function (content) {
     var blob = new Blob([content], {type : 'text/plain'});
     window.open(URL.createObjectURL(blob));
   });
@@ -496,7 +490,7 @@ $('button[name=filename-apply]').click(function () {
   var item = currentFileItem;
   if (item && (! item.directory) && item.href) {
     var newHRef = utils.dirname(item.href) + encodeURIComponent(newName);
-    webdav.movePath(item.href, webdavOrigin + newHRef, webdavUser, webdavPassword).done(function () {
+    webdav.movePath(item.href, webdavOrigin + newHRef).done(function () {
       notify('file ' + item.name + ' renamed');
       refreshFolder();
     });
@@ -519,13 +513,13 @@ $("button[name='editor-wrap-lines']").click(function () {
 });
 $('button[name=editor-reload]').click(function () {
   editor.setValue('...', -1);
-  webdav.loadPath(currentFileItem.href, webdavUser, webdavPassword).done(function (content) {
+  webdav.loadPath(currentFileItem.href).done(function (content) {
     editor.setValue(content, -1);
   });
 });
 $('button[name=editor-save]').click(function () {
   var content = editor.getValue();
-  webdav.savePath(currentFileItem.href, content, webdavUser, webdavPassword).done(function () {
+  webdav.savePath(currentFileItem.href, content).done(function () {
     notify('File saved');
   });
 });

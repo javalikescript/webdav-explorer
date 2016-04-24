@@ -10,13 +10,6 @@ var utils = {
     clazz.baseConstructor = superClass;
     clazz.superClass = superClass.prototype;
   },
-  keys: function(obj) {
-    var list = [];
-    for (var key in obj) {
-      list.push(key);
-    }
-    return list;
-  },
   merge: function(target, source) {
     for (var key in source) {
       if (! (key in target)) {
@@ -24,6 +17,13 @@ var utils = {
       }
     }
     return target;
+  },
+  keys: function(obj) {
+    var list = [];
+    for (var key in obj) {
+      list.push(key);
+    }
+    return list;
   },
   startsWith: function(s, v) {
     return s && (s.lastIndexOf(v, 0) === 0);
