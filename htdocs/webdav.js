@@ -2,6 +2,7 @@
 var WebDAV = function(username, password) {
   this._username = username || null;
   this._password = password || null;
+  //this._jquery = $;
 }
 utils.merge(WebDAV.prototype, {
   setUser: function(username, password) {
@@ -44,13 +45,26 @@ utils.merge(WebDAV.prototype, {
     });
   },
   savePath: function(path, content) {
+    if (typeof content === 'string') {
+      return $.ajax({
+        url: path,
+        type: 'PUT',
+        username: this._username,
+        password: this._password,
+        data: content,
+        contentType: 'text/plain',
+        processData: false
+      });
+    }
     return $.ajax({
       url: path,
       type: 'PUT',
       username: this._username,
       password: this._password,
       data: content,
-      contentType: 'text/plain',
+      /*headers: {
+        "content-length": content.byteLength
+      },*/
       processData: false
     });
   },

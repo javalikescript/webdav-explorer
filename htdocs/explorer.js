@@ -16,6 +16,7 @@ var Section = function(id, transition) {
   this._id = id;
   this._transition = transition || 'right';
   this._node = $('#' + id);
+  this._preferences = {};
 }
 utils.merge(Section.prototype, {
   getId: function() {
@@ -24,6 +25,14 @@ utils.merge(Section.prototype, {
   getNode: function() {
     return this._node;
   },
+  getPreferences: function() {
+    return this._preferences;
+  },
+  setPreferences: function(preferences) {
+    this._preferences = preferences;
+    this.applyPreferences();
+  },
+  applyPreferences: function() {},
   refresh: function() {},
   open: function(fromSection) {
     this._callerSection = fromSection;
@@ -48,8 +57,51 @@ var PanelSection = function(id) {
 }
 utils.inheritsFrom(PanelSection, Section);
 utils.merge(PanelSection.prototype, {
+  applyPreferences: function() {
+    if (this._preferences.showFooter) {
+      this.getNode().addClass('footer');
+    } else {
+      this.getNode().removeClass('footer');
+    }
+  },
   toggleOptions: function() {
     this.getNode().toggleClass('footer');
+    this._preferences.showFooter = this.getNode().hasClass('footer');
+  }
+});
+var SectionManager = function() {
+  this._sections = [];
+}
+utils.merge(SectionManager.prototype, {
+  createDialogSection: function(id) {
+    var section = new DialogSection(id);
+    this._sections.push(section);
+    return section;
+  },
+  createPanelSection: function(id) {
+    var section = new PanelSection(id);
+    this._sections.push(section);
+    return section;
+  },
+  setPreferences: function(preferences) {
+    for (var i = 0; i < this._sections.length; i++) {
+      var section = this._sections[i];
+      var id = section.getId();
+      if (id in preferences) {
+        section.setPreferences(preferences[id]);
+      }
+    }
+  },
+  getPreferences: function() {
+    var preferences = {};
+    for (var i = 0; i < this._sections.length; i++) {
+      var section = this._sections[i];
+      preferences[section.getId()] = section.getPreferences();
+    }
+    return preferences;
+  },
+  getSections: function() {
+    return this._sections;
   }
 });
 
@@ -79,9 +131,10 @@ var webdav = new WebDAV(configuration.webdavUser, configuration.webdavPassword);
 
 var $items = $('#items');
 
-var welcomeSection = new PanelSection('welcome');
-var folderSection = new PanelSection('folder');
-var fileSection = new PanelSection('file');
+var sectionMgr = new SectionManager();
+var welcomeSection = sectionMgr.createPanelSection('welcome');
+var folderSection = sectionMgr.createPanelSection('folder');
+var fileSection = sectionMgr.createPanelSection('file');
 fileSection.refresh = function() {
   this.getNode().find('header h1').text(currentFileItem.name);
   this.getNode().find('footer a[name=file-link]').attr('href', currentFileItem.href);
@@ -90,24 +143,24 @@ fileSection.refresh = function() {
   this.getNode().find('span[name=file-last-modified]').text(currentFileItem.lastModified);
   this.getNode().find('span[name=file-content-length]').text(currentFileItem.contentLength);
 };
-var settingsSection = new DialogSection('settings');
+var settingsSection = sectionMgr.createDialogSection('settings');
 settingsSection.refresh = function() {
   $('input[name=settings-webdav-path]').val(rootItem.href);
   $('input[name=settings-webdav-user]').val(webdav.getUserName());
   $('input[name=settings-webdav-password]').val(webdav.getPassword());
   $('input[name=settings-show-welcome]').prop('checked', configuration.welcome);
 };
-var foldernameSection = new DialogSection('foldername');
+var foldernameSection = sectionMgr.createDialogSection('foldername');
 foldernameSection.refresh = function() {
   this.getNode().find('header h1').text(currentFolderItem.name);
 };
-var foldernewSection = new DialogSection('foldernew');
-var filenewSection = new DialogSection('filenew');
-var filenameSection = new DialogSection('filename');
+var foldernewSection = sectionMgr.createDialogSection('foldernew');
+var filenewSection = sectionMgr.createDialogSection('filenew');
+var filenameSection = sectionMgr.createDialogSection('filename');
 filenameSection.refresh = function() {
   this.getNode().find('header h1').text(currentFileItem.name);
 };
-var editorSection = new PanelSection('editor');
+var editorSection = sectionMgr.createPanelSection('editor');
 editorSection.refresh = function() {
   initializeEditor();
   this.getNode().find('header h1').text(currentFileItem.name);
@@ -116,14 +169,17 @@ editorSection.refresh = function() {
     editor.setValue(content, -1);
   });
 };
-var imageSection = new PanelSection('image');
+var imageSection = sectionMgr.createPanelSection('image');
 imageSection.refresh = function() {
   this.getNode().find('img').prop('src', currentFileItem.href);
 };
-var videoSection = new PanelSection('video');
+var videoSection = sectionMgr.createPanelSection('video');
 videoSection.refresh = function() {
   this.getNode().find('video').prop('src', currentFileItem.href);
 };
+
+sectionMgr.setPreferences(utils.getLocalStorageObject('explorer_sections_preferences', {}));
+
 
 var notify = (function () {
   var $notification = $("#notification");
@@ -273,6 +329,8 @@ $('button[name=settings-save]').click(function () {
   configuration.webdavPassword = $('input[name=settings-webdav-password]').val();
   configuration.welcome = $('input[name=settings-show-welcome]').prop('checked');
   utils.setLocalStorageObject('explorer_configuration', configuration);
+  // section preferences
+  utils.setLocalStorageObject('explorer_sections_preferences', sectionMgr.getPreferences());
 });
 $('button[name=settings-clear]').click(function () {
   utils.removeLocalStorageObject('explorer_configuration');
@@ -307,14 +365,17 @@ $('button[name=file-upload]').click(function () {
 $('#file-input').on('change', function(e) {
   var file = e.target.files[0];
   if (file) {
-    // file.name, size, type
+    //console.log('file name is ' + file.name + ', size is ' + file.size + ', type is ' + file.type);
     var reader = new FileReader();
     reader.onload = function(e) {
       var content = e.target.result;
       newFile(content, file.name);
     };
-    reader.readAsText(file);
-    // readAsArrayBuffer
+    if (file.type.indexOf('text/') == 0) {
+      reader.readAsText(file);
+    } else {
+      reader.readAsArrayBuffer(file);
+    }
   }
 });
 $items.click(function (event) {
