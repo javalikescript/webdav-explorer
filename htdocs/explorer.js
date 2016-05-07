@@ -119,7 +119,6 @@ var rootItem = {
   contentLength: 0
 };
 
-var editor = null;
 var breadcrumbItems = [];
 var currentFolderItem = rootItem;
 var currentFileItem = null;
@@ -161,8 +160,23 @@ filenameSection.refresh = function() {
   this.getNode().find('header h1').text(currentFileItem.name);
 };
 var editorSection = sectionMgr.createPanelSection('editor');
+editorSection.getEditor = (function(id) {
+  var editor = null;
+  return function() {
+    if (editor === null) {
+      editor = ace.edit(id);
+      editor.setTheme('ace/theme/eclipse');
+      //editor.session.setMode('ace/mode/javascript');
+      // TODO use configuration property (key, type, value)
+      editor.session.setUseWrapMode(true);
+      editor.setShowPrintMargin(false);
+      editor.renderer.setShowGutter(false);
+    }
+    return editor;
+  };
+})('editor-content');
 editorSection.refresh = function() {
-  initializeEditor();
+  var editor = this.getEditor();
   this.getNode().find('header h1').text(currentFileItem.name);
   editor.setValue('...', -1);
   webdav.loadPath(currentFileItem.href).done(function (content) {
@@ -191,18 +205,6 @@ var notify = (function () {
     });
   };
 })();
-var initializeEditor = function() {
-  if (editor !== null) {
-    return;
-  }
-  editor = ace.edit("editor-content");
-  editor.setTheme("ace/theme/eclipse");
-  editor.session.setMode("ace/mode/javascript");
-  // TODO use configuration property (key, type, value)
-  editor.session.setUseWrapMode(true);
-  editor.setShowPrintMargin(false);
-  editor.renderer.setShowGutter(false);
-};
 var itemToHtml = function(item) {
   var shortName = item.name.length > 64 ? item.name.substring(0, 64) : item.name;
   var buttons = '<button name="item-open"><i class="fa fa-chevron-right"></i></button>';
