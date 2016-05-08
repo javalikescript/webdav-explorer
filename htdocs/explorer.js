@@ -18,7 +18,7 @@ var Section = function(id, transition) {
   this._node = $('#' + id);
   this._preferences = {};
 }
-utils.merge(Section.prototype, {
+utils.setProperties(Section.prototype, {
   getId: function() {
     return this._id;
   },
@@ -32,6 +32,7 @@ utils.merge(Section.prototype, {
     this._preferences = preferences;
     this.applyPreferences();
   },
+  setup: function() {},
   applyPreferences: function() {},
   refresh: function() {},
   open: function(fromSection) {
@@ -56,7 +57,7 @@ var PanelSection = function(id) {
   PanelSection.baseConstructor.call(this, id, 'right');
 }
 utils.inheritsFrom(PanelSection, Section);
-utils.merge(PanelSection.prototype, {
+utils.setProperties(PanelSection.prototype, {
   applyPreferences: function() {
     if (this._preferences.showFooter) {
       this.getNode().addClass('footer');
@@ -72,7 +73,7 @@ utils.merge(PanelSection.prototype, {
 var SectionManager = function() {
   this._sections = [];
 }
-utils.merge(SectionManager.prototype, {
+utils.setProperties(SectionManager.prototype, {
   createDialogSection: function(id) {
     var section = new DialogSection(id);
     this._sections.push(section);
@@ -83,12 +84,19 @@ utils.merge(SectionManager.prototype, {
     this._sections.push(section);
     return section;
   },
+  setup: function() {
+    for (var i = 0; i < this._sections.length; i++) {
+      var section = this._sections[i];
+      section.setup();
+    }
+  },
   setPreferences: function(preferences) {
     for (var i = 0; i < this._sections.length; i++) {
       var section = this._sections[i];
       var id = section.getId();
       if (id in preferences) {
         section.setPreferences(preferences[id]);
+        section.applyPreferences();
       }
     }
   },
@@ -160,29 +168,59 @@ filenameSection.refresh = function() {
   this.getNode().find('header h1').text(currentFileItem.name);
 };
 var editorSection = sectionMgr.createPanelSection('editor');
-editorSection.getEditor = (function(id) {
-  var editor = null;
-  return function() {
-    if (editor === null) {
-      editor = ace.edit(id);
-      editor.setTheme('ace/theme/eclipse');
-      //editor.session.setMode('ace/mode/javascript');
-      // TODO use configuration property (key, type, value)
-      editor.session.setUseWrapMode(true);
-      editor.setShowPrintMargin(false);
-      editor.renderer.setShowGutter(false);
-    }
-    return editor;
-  };
-})('editor-content');
-editorSection.refresh = function() {
-  var editor = this.getEditor();
-  this.getNode().find('header h1').text(currentFileItem.name);
-  editor.setValue('...', -1);
-  webdav.loadPath(currentFileItem.href).done(function (content) {
-    editor.setValue(content, -1);
-  });
-};
+utils.setProperties(editorSection, {
+  getEditor: (function(id) {
+    var editor = null;
+    return function() {
+      if (editor === null) {
+        editor = ace.edit(id);
+        editor.setTheme('ace/theme/eclipse');
+        //editor.session.setMode('ace/mode/javascript');
+        // TODO use configuration property (key, type, value)
+        editor.session.setUseWrapMode(true);
+        editor.setShowPrintMargin(false);
+        editor.renderer.setShowGutter(false);
+      }
+      return editor;
+    };
+  })('editor-content'),
+  setup: function() {
+    console.log('editorSection.setup()');
+    var self = this;
+    this.getNode().find('button[name=editor-wrap-lines]').click(function () {
+      var editor = self.getEditor();
+      var useWrapMode = editor.session.getUseWrapMode();
+      editor.session.setUseWrapMode(! useWrapMode);
+    });
+    this.getNode().find('button[name=editor-reload]').click(function () {
+      var editor = self.getEditor();
+      editor.setValue('...', -1);
+      webdav.loadPath(currentFileItem.href).done(function (content) {
+        editor.setValue(content, -1);
+      });
+    });
+    this.getNode().find('button[name=editor-save]').click(function () {
+      var editor = self.getEditor();
+      var content = editor.getValue();
+      webdav.savePath(currentFileItem.href, content).done(function () {
+        notify('File saved');
+      });
+    });
+  },
+  refresh: function() {
+    var editor = this.getEditor();
+    this.getNode().find('header h1').text(currentFileItem.name);
+    editor.setValue('...', -1);
+    webdav.loadPath(currentFileItem.href).done(function (content) {
+      editor.setValue(content, -1);
+    });
+  },
+  applyPreferences: function() {
+    PanelSection.prototype.applyPreferences.call(this);
+  }
+});
+
+
 var imageSection = sectionMgr.createPanelSection('image');
 imageSection.refresh = function() {
   this.getNode().find('img').prop('src', currentFileItem.href);
@@ -193,6 +231,7 @@ videoSection.refresh = function() {
 };
 
 sectionMgr.setPreferences(utils.getLocalStorageObject('explorer_sections_preferences', {}));
+sectionMgr.setup();
 
 
 var notify = (function () {
@@ -569,22 +608,6 @@ $("button[name='editor-show-details']").click(function () {
 });
 $('button[name=editor-hide]').click(function () {
   editorSection.close();
-});
-$("button[name='editor-wrap-lines']").click(function () {
-  var useWrapMode = editor.session.getUseWrapMode();
-  editor.session.setUseWrapMode(! useWrapMode);
-});
-$('button[name=editor-reload]').click(function () {
-  editor.setValue('...', -1);
-  webdav.loadPath(currentFileItem.href).done(function (content) {
-    editor.setValue(content, -1);
-  });
-});
-$('button[name=editor-save]').click(function () {
-  var content = editor.getValue();
-  webdav.savePath(currentFileItem.href, content).done(function () {
-    notify('File saved');
-  });
 });
 /***************************************************************
  * Section image

@@ -4,7 +4,7 @@ var WebDAV = function(username, password) {
   this._password = password || null;
   //this._jquery = $;
 }
-utils.merge(WebDAV.prototype, {
+utils.setProperties(WebDAV.prototype, {
   setUser: function(username, password) {
     this._username = username;
     this._password = password;

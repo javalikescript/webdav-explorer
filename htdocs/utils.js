@@ -10,11 +10,9 @@ var utils = {
     clazz.baseConstructor = superClass;
     clazz.superClass = superClass.prototype;
   },
-  merge: function(target, source) {
+  setProperties: function(target, source) {
     for (var key in source) {
-      if (! (key in target)) {
-        target[key] = source[key];
-      }
+      target[key] = source[key];
     }
     return target;
   },
